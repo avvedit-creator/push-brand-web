@@ -34,7 +34,9 @@
     --pdf-fondo-tarjeta: #f7f7f7;
     /* el amarillo de marca (#f5d800) casi no se lee sobre blanco: para el PDF
        se usa una versión oscurecida solo como acento, nunca como fondo de texto. */
-    --pdf-acento: #8a7000;
+    --pdf-acento: #8f8a1f;
+    --pdf-acento-suave: #e3dd7e;
+    --pdf-marca-agua: #f4f2dc;
     --font-display: "Anton", Impact, "Arial Narrow", sans-serif;
     --font-ui: "Inter", "Segoe UI", -apple-system, Roboto, Arial, sans-serif;
     --radius-lg: 8px;
@@ -125,28 +127,62 @@
 
   /* ---------- Hoja usada solo para generar el PDF (fondo blanco, paleta propia) ---------- */
   #envoltorioHojaPdf { position: absolute; top: 0; left: 0; width: 0; height: 0; overflow: hidden; }
-  #hojaPdf { width: 780px; background: #ffffff; color: var(--pdf-texto-oscuro); font-family: var(--font-ui); padding: 40px; }
-  #hojaPdf .marca-pdf { display: flex; align-items: baseline; gap: 6px; font-family: var(--font-display); font-size: 22px; text-transform: uppercase; margin-bottom: 24px; }
+  #hojaPdf { width: 820px; background: #ffffff; color: var(--pdf-texto-oscuro); font-family: var(--font-ui); padding: 48px; position: relative; overflow: hidden; }
+  #hojaPdf .marca-agua-pdf {
+    position: absolute; top: -60px; right: -20px; font-family: var(--font-display); font-size: 300px;
+    color: var(--pdf-fondo-tarjeta); z-index: 0; line-height: 1; user-select: none;
+  }
+  #hojaPdf .encabezado-pdf { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; }
+  #hojaPdf .marca-pdf { display: flex; align-items: baseline; gap: 4px; font-family: var(--font-ui); font-weight: 900; font-size: 30px; letter-spacing: -0.01em; }
   #hojaPdf .marca-pdf .n1 { color: var(--pdf-texto-oscuro); }
   #hojaPdf .marca-pdf .n2 { color: var(--pdf-acento); }
-  #hojaPdf h1 { font-family: var(--font-display); font-weight: 400; text-transform: uppercase; font-size: 24px; margin: 8px 0 4px; color: var(--pdf-texto-oscuro); }
-  #hojaPdf .numero-pdf { font-size: 13px; color: var(--pdf-texto-tenue); margin: 0 0 20px; }
-  #hojaPdf p { font-size: 13.5px; line-height: 1.6; color: var(--pdf-texto-cuerpo); }
-  #hojaPdf .partes-pdf { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--pdf-borde-suave); border: 1px solid var(--pdf-borde-suave); border-radius: 16px; overflow: hidden; margin: 10px 0 24px; }
-  #hojaPdf .parte-pdf { background: var(--pdf-fondo-tarjeta); padding: 18px 20px; }
-  #hojaPdf .parte-pdf h2 { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pdf-acento); margin: 0 0 10px; }
-  #hojaPdf .parte-pdf p { margin: 0 0 8px; font-size: 13.5px; color: var(--pdf-texto-oscuro); }
-  #hojaPdf .parte-pdf .t { color: var(--pdf-texto-tenue); font-size: 11.5px; }
-  #hojaPdf table.detalle-pdf { width: 100%; border-collapse: collapse; margin: 4px 0 22px; }
-  #hojaPdf table.detalle-pdf th { text-align: left; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pdf-texto-tenue); padding: 0 0 8px; border-bottom: 1px solid var(--pdf-borde-claro); }
-  #hojaPdf table.detalle-pdf td { font-size: 13.5px; padding: 10px 0; border-bottom: 1px solid var(--pdf-borde-tenue); color: var(--pdf-texto-oscuro); }
+  #hojaPdf .tagline-pdf { padding-top: 12px; }
+  #hojaPdf .tagline-pdf span.texto { font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--pdf-texto-tenue); white-space: nowrap; }
+  #hojaPdf .titulo-pdf { position: relative; z-index: 1; display: flex; align-items: center; gap: 18px; margin-bottom: 34px; }
+  #hojaPdf .check-pdf {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--pdf-acento);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  #hojaPdf .check-pdf svg { display: block; }
+  #hojaPdf .divisor-titulo-pdf { width: 2px; height: 44px; background: var(--pdf-borde-claro); flex-shrink: 0; }
+  #hojaPdf h1 { font-family: var(--font-ui); font-weight: 800; text-transform: none; font-size: 30px; margin: 0 0 4px; color: var(--pdf-texto-oscuro); }
+  #hojaPdf .numero-pdf { font-size: 13px; color: var(--pdf-texto-tenue); margin: 0; letter-spacing: 0.03em; }
+  #hojaPdf p { font-size: 13.5px; line-height: 1.6; color: var(--pdf-texto-cuerpo); margin: 0; }
+  #hojaPdf .partes-pdf { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin: 0 0 30px; }
+  #hojaPdf .parte-pdf { padding: 0 0 0 28px; border-left: 1px solid var(--pdf-borde-claro); }
+  #hojaPdf .parte-pdf:first-child { padding-left: 0; border-left: none; }
+  #hojaPdf .parte-pdf-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  #hojaPdf .parte-pdf-head .icono-pdf { color: var(--pdf-acento); flex-shrink: 0; }
+  #hojaPdf .parte-pdf h2 { font-family: var(--font-ui); font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pdf-acento); margin: 0; }
+  #hojaPdf .nombre-parte { font-size: 16px; font-weight: 800; color: var(--pdf-texto-oscuro); margin: 0 0 10px; }
+  #hojaPdf .parte-pdf .t { display: flex; align-items: center; gap: 8px; color: var(--pdf-texto-tenue); font-size: 12px; margin: 0 0 6px; }
+  #hojaPdf .parte-pdf .t .icono-pdf-inline { color: var(--pdf-texto-tenue); flex-shrink: 0; }
+  #hojaPdf .parte-pdf .t:last-child { margin-bottom: 0; }
+  #hojaPdf table.detalle-pdf { position: relative; z-index: 1; width: 100%; border-collapse: collapse; margin: 0 0 4px; }
+  #hojaPdf table.detalle-pdf thead th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pdf-texto-tenue); padding: 12px 16px; background: var(--pdf-fondo-tarjeta); }
+  #hojaPdf table.detalle-pdf thead th:first-child { border-radius: 10px 0 0 10px; }
+  #hojaPdf table.detalle-pdf thead th:last-child { border-radius: 0 10px 10px 0; }
+  #hojaPdf table.detalle-pdf td { font-size: 14.5px; padding: 16px 16px 4px; color: var(--pdf-texto-oscuro); }
   #hojaPdf table.detalle-pdf td.monto { text-align: right; white-space: nowrap; }
-  #hojaPdf .resumen-pdf { margin: 0 0 6px; }
-  #hojaPdf .resumen-pdf .linea { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: var(--pdf-texto-cuerpo); }
-  #hojaPdf .resumen-pdf .linea.destacada { color: var(--pdf-texto-oscuro); font-weight: 700; border-top: 1px solid var(--pdf-borde-claro); margin-top: 4px; padding-top: 8px; }
-  #hojaPdf .total-pdf { display: flex; justify-content: flex-end; gap: 14px; font-size: 16px; font-weight: 800; margin: 4px 0 24px; color: var(--pdf-texto-oscuro); }
-  #hojaPdf .total-pdf .num { color: var(--pdf-acento); }
-  #hojaPdf .pie-pdf { margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--pdf-borde-tenue); font-size: 10.5px; color: var(--pdf-texto-pie); display: flex; justify-content: space-between; }
+  #hojaPdf table.detalle-pdf tr.fila-concepto td { font-weight: 800; padding-bottom: 4px; }
+  #hojaPdf .resumen-pdf { position: relative; z-index: 1; margin: 0 0 6px; padding: 0 16px; }
+  #hojaPdf .resumen-pdf .linea { display: flex; justify-content: space-between; font-size: 13px; padding: 7px 0; color: var(--pdf-texto-tenue); }
+  #hojaPdf .resumen-pdf .linea.destacada { color: var(--pdf-texto-cuerpo); font-weight: 700; }
+  #hojaPdf .total-pdf {
+    position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center;
+    margin: 18px 16px 30px; padding-top: 18px; border-top: 1px solid var(--pdf-borde-claro);
+    font-size: 14px; font-weight: 800; color: var(--pdf-texto-oscuro);
+  }
+  #hojaPdf .total-pdf .num {
+    color: var(--pdf-texto-oscuro); background: var(--pdf-acento-suave); font-size: 16px;
+    padding: 8px 18px; border-radius: 999px;
+  }
+  #hojaPdf .lugar-pdf { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; color: var(--pdf-texto-tenue); }
+  #hojaPdf .lugar-pdf .icono-pdf-inline { color: var(--pdf-acento); flex-shrink: 0; }
+  #hojaPdf .pie-pdf {
+    position: relative; z-index: 1; margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--pdf-borde-tenue);
+    font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pdf-texto-pie); display: flex; justify-content: space-between;
+  }
 </style>
 </head>
 <body>
@@ -248,29 +284,45 @@
 
   <!-- Hoja usada solo para generar el PDF -->
   <div id="envoltorioHojaPdf"><div id="hojaPdf">
-    <div class="marca-pdf"><span class="n1">PUSH</span><span class="n2">&amp; BRAND</span></div>
-    <h1 id="pdfTitulo">Comprobante de pago</h1>
-    <p class="numero-pdf" id="pdfNumeroFecha"></p>
+    <div class="marca-agua-pdf">&amp;</div>
+    <div class="encabezado-pdf">
+      <div class="marca-pdf"><span class="n1">PUSH</span><span class="n2">&amp;</span><span class="n1">BRAND</span></div>
+      <div class="tagline-pdf"><span class="texto">Tu marca en buenas manos</span></div>
+    </div>
+    <div class="titulo-pdf">
+      <div class="check-pdf"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+      <div class="divisor-titulo-pdf"></div>
+      <div>
+        <h1 id="pdfTitulo">Comprobante de pago</h1>
+        <p class="numero-pdf" id="pdfNumeroFecha"></p>
+      </div>
+    </div>
     <div class="partes-pdf">
       <div class="parte-pdf">
-        <h2>Emisor</h2>
-        <p>PUSH &amp; Brand</p>
-        <p class="t">pushandbrand.com</p>
+        <div class="parte-pdf-head">
+          <span class="icono-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"></path></svg></span>
+          <h2>Emisor</h2>
+        </div>
+        <p class="nombre-parte">PUSH &amp; Brand</p>
+        <p class="t"><span class="icono-pdf-inline"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m2 7 10 6 10-6"></path></svg></span>pushandbrand.com</p>
       </div>
       <div class="parte-pdf">
-        <h2>Cliente</h2>
-        <p id="pdfClienteNombre"></p>
-        <p class="t" id="pdfClienteDoc"></p>
-        <p class="t" id="pdfClienteEmail"></p>
+        <div class="parte-pdf-head">
+          <span class="icono-pdf"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-7 8-7s8 3 8 7"></path></svg></span>
+          <h2>Cliente</h2>
+        </div>
+        <p class="nombre-parte" id="pdfClienteNombre"></p>
+        <p class="t"><span class="icono-pdf-inline"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M10 13h4M10 17h4"></path></svg></span><span id="pdfClienteDoc"></span></p>
+        <p class="t" id="pdfClienteEmailFila"><span class="icono-pdf-inline"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m2 7 10 6 10-6"></path></svg></span><span id="pdfClienteEmail"></span></p>
       </div>
     </div>
     <table class="detalle-pdf">
       <thead><tr><th>Concepto</th><th style="text-align:right">Importe</th></tr></thead>
-      <tbody><tr><td id="pdfConcepto"></td><td class="monto" id="pdfMonto"></td></tr></tbody>
+      <tbody><tr class="fila-concepto"><td id="pdfConcepto"></td><td class="monto" id="pdfMonto"></td></tr></tbody>
     </table>
     <div class="resumen-pdf" id="resumenPdf"></div>
     <div class="total-pdf"><span id="pdfTotalLabel">Total</span><span class="num" id="pdfTotal"></span></div>
-    <p id="pdfLugar"></p>
+    <p class="lugar-pdf"><span class="icono-pdf-inline"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg></span><span id="pdfLugar"></span></p>
     <div class="pie-pdf"><span>PUSH &amp; BRAND — PUSHANDBRAND.COM</span><span id="pdfPagina">Página 1/1</span></div>
   </div></div>
 
@@ -512,33 +564,50 @@
     // de capturar. Solo funciona así — inline + var() — probado a mano, no es capricho.
     function aplicarColoresInlinePdf(hoja) {
       const set = (el, prop, valor) => { if (el) el.style.setProperty(prop, valor, 'important'); };
+      const setAll = (sel, props) => hoja.querySelectorAll(sel).forEach((el) => { for (const p in props) set(el, p, props[p]); });
+
       set(hoja, 'color', 'var(--pdf-texto-oscuro)');
-      set(hoja.querySelector('.marca-pdf .n1'), 'color', 'var(--pdf-texto-oscuro)');
+      set(hoja.querySelector('.marca-agua-pdf'), 'color', 'var(--pdf-marca-agua)');
+      setAll('.encabezado-pdf', { display: 'flex', 'justify-content': 'space-between', 'align-items': 'flex-start' });
+      hoja.querySelectorAll('.marca-pdf .n1').forEach((el) => set(el, 'color', 'var(--pdf-texto-oscuro)'));
       set(hoja.querySelector('.marca-pdf .n2'), 'color', 'var(--pdf-acento)');
+      set(hoja.querySelector('.tagline-pdf .texto'), 'color', 'var(--pdf-texto-tenue)');
+      setAll('.titulo-pdf', { display: 'flex', 'align-items': 'center', gap: '18px' });
+      const check = hoja.querySelector('.check-pdf');
+      set(check, 'background', 'var(--pdf-acento)');
+      set(check, 'border-radius', '50%');
+      set(check, 'display', 'flex');
+      set(check, 'align-items', 'center');
+      set(check, 'justify-content', 'center');
+      set(hoja.querySelector('.divisor-titulo-pdf'), 'background', 'var(--pdf-borde-claro)');
       set(hoja.querySelector('h1'), 'color', 'var(--pdf-texto-oscuro)');
       set(hoja.querySelector('.numero-pdf'), 'color', 'var(--pdf-texto-tenue)');
-      hoja.querySelectorAll(':scope > p').forEach((el) => set(el, 'color', 'var(--pdf-texto-cuerpo)'));
+
       const partes = hoja.querySelector('.partes-pdf');
-      set(partes, 'background', 'var(--pdf-borde-suave)');
-      set(partes, 'border-color', 'var(--pdf-borde-suave)');
       set(partes, 'display', 'grid');
       set(partes, 'grid-template-columns', '1fr 1fr');
-      set(partes, 'gap', '1px');
-      hoja.querySelectorAll('.parte-pdf').forEach((el) => set(el, 'background', 'var(--pdf-fondo-tarjeta)'));
+      set(partes, 'gap', '36px');
+      hoja.querySelectorAll('.parte-pdf').forEach((el, i) => { if (i > 0) { set(el, 'border-left-color', 'var(--pdf-borde-claro)'); } });
+      setAll('.parte-pdf-head', { display: 'flex', 'align-items': 'center', gap: '8px' });
+      hoja.querySelectorAll('.parte-pdf-head .icono-pdf').forEach((el) => set(el, 'color', 'var(--pdf-acento)'));
       hoja.querySelectorAll('.parte-pdf h2').forEach((el) => set(el, 'color', 'var(--pdf-acento)'));
-      hoja.querySelectorAll('.parte-pdf p').forEach((el) => set(el, 'color', 'var(--pdf-texto-oscuro)'));
-      hoja.querySelectorAll('.parte-pdf .t').forEach((el) => set(el, 'color', 'var(--pdf-texto-tenue)'));
-      // el mismo bug ignora "display:flex"/"width:100%" puestos por hoja de estilos en esta
-      // hoja: sin forzarlos inline, las columnas y las filas etiqueta/valor quedan pegadas.
+      hoja.querySelectorAll('.nombre-parte').forEach((el) => set(el, 'color', 'var(--pdf-texto-oscuro)'));
+      setAll('.parte-pdf .t', { display: 'flex', 'align-items': 'center', gap: '8px', color: 'var(--pdf-texto-tenue)' });
+      hoja.querySelectorAll('.parte-pdf .t .icono-pdf-inline').forEach((el) => set(el, 'color', 'var(--pdf-texto-tenue)'));
+
       set(hoja.querySelector('table.detalle-pdf'), 'width', '100%');
-      hoja.querySelectorAll('table.detalle-pdf th').forEach((el) => { set(el, 'color', 'var(--pdf-texto-tenue)'); set(el, 'border-bottom-color', 'var(--pdf-borde-claro)'); set(el, 'text-align', 'left'); });
-      hoja.querySelectorAll('table.detalle-pdf td').forEach((el) => { set(el, 'color', 'var(--pdf-texto-oscuro)'); set(el, 'border-bottom-color', 'var(--pdf-borde-tenue)'); });
+      hoja.querySelectorAll('table.detalle-pdf thead th').forEach((el) => { set(el, 'color', 'var(--pdf-texto-tenue)'); set(el, 'background', 'var(--pdf-fondo-tarjeta)'); set(el, 'text-align', 'left'); });
+      hoja.querySelector('table.detalle-pdf thead th:last-child') && set(hoja.querySelector('table.detalle-pdf thead th:last-child'), 'text-align', 'right');
+      hoja.querySelectorAll('table.detalle-pdf td').forEach((el) => set(el, 'color', 'var(--pdf-texto-oscuro)'));
       hoja.querySelectorAll('table.detalle-pdf td.monto').forEach((el) => { set(el, 'text-align', 'right'); set(el, 'white-space', 'nowrap'); });
-      hoja.querySelectorAll('.resumen-pdf .linea').forEach((el) => { set(el, 'color', 'var(--pdf-texto-cuerpo)'); set(el, 'display', 'flex'); set(el, 'justify-content', 'space-between'); });
-      hoja.querySelectorAll('.resumen-pdf .linea.destacada').forEach((el) => { set(el, 'color', 'var(--pdf-texto-oscuro)'); set(el, 'border-top-color', 'var(--pdf-borde-claro)'); });
-      hoja.querySelectorAll('.total-pdf').forEach((el) => { set(el, 'color', 'var(--pdf-texto-oscuro)'); set(el, 'display', 'flex'); set(el, 'justify-content', 'flex-end'); set(el, 'gap', '14px'); });
-      hoja.querySelectorAll('.total-pdf .num').forEach((el) => set(el, 'color', 'var(--pdf-acento)'));
-      hoja.querySelectorAll('.pie-pdf').forEach((el) => { set(el, 'color', 'var(--pdf-texto-pie)'); set(el, 'border-top-color', 'var(--pdf-borde-tenue)'); set(el, 'display', 'flex'); set(el, 'justify-content', 'space-between'); });
+
+      hoja.querySelectorAll('.resumen-pdf .linea').forEach((el) => { set(el, 'color', 'var(--pdf-texto-tenue)'); set(el, 'display', 'flex'); set(el, 'justify-content', 'space-between'); });
+      hoja.querySelectorAll('.resumen-pdf .linea.destacada').forEach((el) => set(el, 'color', 'var(--pdf-texto-cuerpo)'));
+      setAll('.total-pdf', { display: 'flex', 'justify-content': 'space-between', 'align-items': 'center', color: 'var(--pdf-texto-oscuro)', 'border-top-color': 'var(--pdf-borde-claro)' });
+      hoja.querySelectorAll('.total-pdf .num').forEach((el) => { set(el, 'color', 'var(--pdf-texto-oscuro)'); set(el, 'background', 'var(--pdf-acento-suave)'); set(el, 'border-radius', '999px'); });
+      setAll('.lugar-pdf', { display: 'flex', 'align-items': 'center', gap: '8px', color: 'var(--pdf-texto-tenue)' });
+      hoja.querySelectorAll('.lugar-pdf .icono-pdf-inline').forEach((el) => set(el, 'color', 'var(--pdf-acento)'));
+      setAll('.pie-pdf', { display: 'flex', 'justify-content': 'space-between', color: 'var(--pdf-texto-pie)', 'border-top-color': 'var(--pdf-borde-tenue)' });
     }
 
     function poblarHojaPdf() {
@@ -556,6 +625,7 @@
       document.getElementById('pdfClienteNombre').textContent = nombreCliente || '—';
       document.getElementById('pdfClienteDoc').textContent = (CONFIG_PAIS[pais].labelDoc + ': ' + (doc || '—'));
       document.getElementById('pdfClienteEmail').textContent = email || '';
+      document.getElementById('pdfClienteEmailFila').style.display = email ? 'flex' : 'none';
       document.getElementById('pdfConcepto').textContent = concepto;
       document.getElementById('pdfMonto').textContent = formatoMonto(c.base, c.moneda);
 
