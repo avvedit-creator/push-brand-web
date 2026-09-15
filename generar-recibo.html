@@ -158,13 +158,11 @@
   <div class="contenido">
     <span class="eyebrow-oscuro">Herramienta interna</span>
     <h1>Generar comprobante de pago</h1>
-    <p class="lead">Completá los datos y te genera el PDF listo — con el formato ajustado al país del cliente (Uruguay o España). Es de uso interno tuyo, no lo compartas.</p>
+    <p class="lead">Completá los datos y te genera el PDF listo — con el formato ajustado al país del cliente. Es de uso interno tuyo, no lo compartas.</p>
 
-    <div class="pais-pills">
-      <input type="radio" name="pais" id="paisUY" value="UY" checked>
-      <label for="paisUY">Cliente en Uruguay</label>
-      <input type="radio" name="pais" id="paisES" value="ES">
-      <label for="paisES">Cliente en España</label>
+    <div class="campo">
+      <label for="pais">País del cliente</label>
+      <select id="pais"></select>
     </div>
 
     <div class="campo">
@@ -206,11 +204,11 @@
 
     <div class="campo-check-iva">
       <input type="checkbox" id="incluirIva">
-      <label for="incluirIva">Incluir IVA</label>
+      <label for="incluirIva" id="labelIva">Incluir IVA</label>
     </div>
     <div class="fila" id="filaIva" style="display:none">
       <div class="campo">
-        <label for="ivaPorcentaje">Porcentaje de IVA</label>
+        <label for="ivaPorcentaje" id="labelPorcentajeIva">Porcentaje de IVA</label>
         <input type="number" id="ivaPorcentaje" step="0.5" min="0" max="100" value="21">
       </div>
     </div>
@@ -283,21 +281,40 @@
        ese renderer viejo devuelve un canvas en blanco (fondo sólido, sin nada del contenido real). -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
   <script>
+    // Documento, IVA/impuesto local y regiones de cada país. Para UY y ES el documento
+    // se valida de verdad (dígito verificador real); para el resto solo se pide que no
+    // esté vacío — no hay un algoritmo de verificación inventado para esos países.
     const CONFIG_PAIS = {
-      UY: {
-        labelDoc: 'Cédula o RUT', monedas: ['UYU', 'USD'], ivaDefault: 22,
-        labelLugar: 'Departamento', lugarDefault: 'Montevideo',
-        regiones: ['Artigas', 'Canelones', 'Cerro Largo', 'Colonia', 'Durazno', 'Flores', 'Florida', 'Lavalleja', 'Maldonado', 'Montevideo', 'Paysandú', 'Río Negro', 'Rivera', 'Rocha', 'Salto', 'San José', 'Soriano', 'Tacuarembó', 'Treinta y Tres'],
-      },
-      ES: {
-        labelDoc: 'DNI / NIF', monedas: ['EUR', 'USD'], ivaDefault: 21,
-        labelLugar: 'Comunidad autónoma', lugarDefault: 'Comunidad de Madrid',
-        regiones: ['Andalucía', 'Aragón', 'Asturias', 'Baleares', 'Canarias', 'Cantabria', 'Castilla-La Mancha', 'Castilla y León', 'Cataluña', 'Comunidad de Madrid', 'Comunidad Valenciana', 'Extremadura', 'Galicia', 'La Rioja', 'Murcia', 'Navarra', 'País Vasco', 'Ceuta', 'Melilla'],
-      },
+      AR: { nombre: 'Argentina', labelDoc: 'CUIT / DNI', labelIva: 'IVA', monedas: ['ARS', 'USD'], ivaDefault: 21, labelLugar: 'Provincia', lugarDefault: 'Buenos Aires', regiones: ['Buenos Aires', 'Ciudad Autónoma de Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'] },
+      BO: { nombre: 'Bolivia', labelDoc: 'Cédula de Identidad', labelIva: 'IVA', monedas: ['BOB', 'USD'], ivaDefault: 13, labelLugar: 'Departamento', lugarDefault: 'La Paz', regiones: ['Beni', 'Chuquisaca', 'Cochabamba', 'La Paz', 'Oruro', 'Pando', 'Potosí', 'Santa Cruz', 'Tarija'] },
+      CL: { nombre: 'Chile', labelDoc: 'RUT', labelIva: 'IVA', monedas: ['CLP', 'USD'], ivaDefault: 19, labelLugar: 'Región', lugarDefault: 'Metropolitana de Santiago', regiones: ['Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo', 'Valparaíso', 'Metropolitana de Santiago', "O'Higgins", 'Maule', 'Ñuble', 'Biobío', 'La Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes'] },
+      CO: { nombre: 'Colombia', labelDoc: 'Cédula de Ciudadanía', labelIva: 'IVA', monedas: ['COP', 'USD'], ivaDefault: 19, labelLugar: 'Departamento', lugarDefault: 'Bogotá D.C.', regiones: ['Amazonas', 'Antioquia', 'Arauca', 'Atlántico', 'Bogotá D.C.', 'Bolívar', 'Boyacá', 'Caldas', 'Caquetá', 'Casanare', 'Cauca', 'Cesar', 'Chocó', 'Córdoba', 'Cundinamarca', 'Guainía', 'Guaviare', 'Huila', 'La Guajira', 'Magdalena', 'Meta', 'Nariño', 'Norte de Santander', 'Putumayo', 'Quindío', 'Risaralda', 'San Andrés y Providencia', 'Santander', 'Sucre', 'Tolima', 'Valle del Cauca', 'Vaupés', 'Vichada'] },
+      CR: { nombre: 'Costa Rica', labelDoc: 'Cédula de Identidad', labelIva: 'IVA', monedas: ['CRC', 'USD'], ivaDefault: 13, labelLugar: 'Provincia', lugarDefault: 'San José', regiones: ['San José', 'Alajuela', 'Cartago', 'Heredia', 'Guanacaste', 'Puntarenas', 'Limón'] },
+      CU: { nombre: 'Cuba', labelDoc: 'Carné de Identidad', labelIva: 'Impuesto', monedas: ['CUP', 'USD'], ivaDefault: 0, labelLugar: 'Provincia', lugarDefault: 'La Habana', regiones: ['Pinar del Río', 'Artemisa', 'La Habana', 'Mayabeque', 'Matanzas', 'Cienfuegos', 'Villa Clara', 'Sancti Spíritus', 'Ciego de Ávila', 'Camagüey', 'Las Tunas', 'Holguín', 'Granma', 'Santiago de Cuba', 'Guantánamo', 'Isla de la Juventud'] },
+      EC: { nombre: 'Ecuador', labelDoc: 'Cédula', labelIva: 'IVA', monedas: ['USD'], ivaDefault: 15, labelLugar: 'Provincia', lugarDefault: 'Pichincha', regiones: ['Azuay', 'Bolívar', 'Cañar', 'Carchi', 'Chimborazo', 'Cotopaxi', 'El Oro', 'Esmeraldas', 'Galápagos', 'Guayas', 'Imbabura', 'Loja', 'Los Ríos', 'Manabí', 'Morona Santiago', 'Napo', 'Orellana', 'Pastaza', 'Pichincha', 'Santa Elena', 'Santo Domingo de los Tsáchilas', 'Sucumbíos', 'Tungurahua', 'Zamora Chinchipe'] },
+      SV: { nombre: 'El Salvador', labelDoc: 'DUI', labelIva: 'IVA', monedas: ['USD'], ivaDefault: 13, labelLugar: 'Departamento', lugarDefault: 'San Salvador', regiones: ['Ahuachapán', 'Cabañas', 'Chalatenango', 'Cuscatlán', 'La Libertad', 'La Paz', 'La Unión', 'Morazán', 'San Miguel', 'San Salvador', 'San Vicente', 'Santa Ana', 'Sonsonate', 'Usulután'] },
+      ES: { nombre: 'España', labelDoc: 'DNI / NIF', labelIva: 'IVA', monedas: ['EUR', 'USD'], ivaDefault: 21, labelLugar: 'Comunidad autónoma', lugarDefault: 'Comunidad de Madrid', regiones: ['Andalucía', 'Aragón', 'Asturias', 'Baleares', 'Canarias', 'Cantabria', 'Castilla-La Mancha', 'Castilla y León', 'Cataluña', 'Comunidad de Madrid', 'Comunidad Valenciana', 'Extremadura', 'Galicia', 'La Rioja', 'Murcia', 'Navarra', 'País Vasco', 'Ceuta', 'Melilla'] },
+      GT: { nombre: 'Guatemala', labelDoc: 'DPI', labelIva: 'IVA', monedas: ['GTQ', 'USD'], ivaDefault: 12, labelLugar: 'Departamento', lugarDefault: 'Guatemala', regiones: ['Alta Verapaz', 'Baja Verapaz', 'Chimaltenango', 'Chiquimula', 'El Progreso', 'Escuintla', 'Guatemala', 'Huehuetenango', 'Izabal', 'Jalapa', 'Jutiapa', 'Petén', 'Quetzaltenango', 'Quiché', 'Retalhuleu', 'Sacatepéquez', 'San Marcos', 'Santa Rosa', 'Sololá', 'Suchitepéquez', 'Totonicapán', 'Zacapa'] },
+      GQ: { nombre: 'Guinea Ecuatorial', labelDoc: 'DNI', labelIva: 'IVA', monedas: ['XAF', 'USD'], ivaDefault: 15, labelLugar: 'Provincia', lugarDefault: 'Bioko Norte', regiones: ['Annobón', 'Bioko Norte', 'Bioko Sur', 'Centro Sur', 'Kié-Ntem', 'Litoral', 'Wele-Nzas', 'Djibloho'] },
+      HN: { nombre: 'Honduras', labelDoc: 'Tarjeta de Identidad', labelIva: 'ISV', monedas: ['HNL', 'USD'], ivaDefault: 15, labelLugar: 'Departamento', lugarDefault: 'Francisco Morazán', regiones: ['Atlántida', 'Choluteca', 'Colón', 'Comayagua', 'Copán', 'Cortés', 'El Paraíso', 'Francisco Morazán', 'Gracias a Dios', 'Intibucá', 'Islas de la Bahía', 'La Paz', 'Lempira', 'Ocotepeque', 'Olancho', 'Santa Bárbara', 'Valle', 'Yoro'] },
+      MX: { nombre: 'México', labelDoc: 'RFC / CURP', labelIva: 'IVA', monedas: ['MXN', 'USD'], ivaDefault: 16, labelLugar: 'Estado', lugarDefault: 'Ciudad de México', regiones: ['Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche', 'Chiapas', 'Chihuahua', 'Ciudad de México', 'Coahuila', 'Colima', 'Durango', 'Estado de México', 'Guanajuato', 'Guerrero', 'Hidalgo', 'Jalisco', 'Michoacán', 'Morelos', 'Nayarit', 'Nuevo León', 'Oaxaca', 'Puebla', 'Querétaro', 'Quintana Roo', 'San Luis Potosí', 'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala', 'Veracruz', 'Yucatán', 'Zacatecas'] },
+      NI: { nombre: 'Nicaragua', labelDoc: 'Cédula de Identidad', labelIva: 'IVA', monedas: ['NIO', 'USD'], ivaDefault: 15, labelLugar: 'Departamento', lugarDefault: 'Managua', regiones: ['Boaco', 'Carazo', 'Chinandega', 'Chontales', 'Estelí', 'Granada', 'Jinotega', 'León', 'Madriz', 'Managua', 'Masaya', 'Matagalpa', 'Nueva Segovia', 'Río San Juan', 'Rivas', 'Costa Caribe Norte', 'Costa Caribe Sur'] },
+      PA: { nombre: 'Panamá', labelDoc: 'Cédula', labelIva: 'ITBMS', monedas: ['USD'], ivaDefault: 7, labelLugar: 'Provincia', lugarDefault: 'Panamá', regiones: ['Bocas del Toro', 'Chiriquí', 'Coclé', 'Colón', 'Darién', 'Herrera', 'Los Santos', 'Panamá', 'Panamá Oeste', 'Veraguas'] },
+      PY: { nombre: 'Paraguay', labelDoc: 'Cédula de Identidad', labelIva: 'IVA', monedas: ['PYG', 'USD'], ivaDefault: 10, labelLugar: 'Departamento', lugarDefault: 'Asunción', regiones: ['Asunción', 'Concepción', 'San Pedro', 'Cordillera', 'Guairá', 'Caaguazú', 'Caazapá', 'Itapúa', 'Misiones', 'Paraguarí', 'Alto Paraná', 'Central', 'Ñeembucú', 'Amambay', 'Canindeyú', 'Presidente Hayes', 'Boquerón', 'Alto Paraguay'] },
+      PE: { nombre: 'Perú', labelDoc: 'DNI', labelIva: 'IGV', monedas: ['PEN', 'USD'], ivaDefault: 18, labelLugar: 'Departamento', lugarDefault: 'Lima', regiones: ['Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco', 'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad', 'Lambayeque', 'Lima', 'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín', 'Tacna', 'Tumbes', 'Ucayali'] },
+      DO: { nombre: 'República Dominicana', labelDoc: 'Cédula', labelIva: 'ITBIS', monedas: ['DOP', 'USD'], ivaDefault: 18, labelLugar: 'Provincia', lugarDefault: 'Distrito Nacional', regiones: ['Distrito Nacional', 'Azua', 'Bahoruco', 'Barahona', 'Dajabón', 'Duarte', 'Elías Piña', 'El Seibo', 'Espaillat', 'Hato Mayor', 'Independencia', 'La Altagracia', 'La Romana', 'La Vega', 'María Trinidad Sánchez', 'Monseñor Nouel', 'Monte Cristi', 'Monte Plata', 'Pedernales', 'Peravia', 'Puerto Plata', 'Samaná', 'San Cristóbal', 'San José de Ocoa', 'San Juan', 'San Pedro de Macorís', 'Sánchez Ramírez', 'Santiago', 'Santiago Rodríguez', 'Santo Domingo', 'Valverde'] },
+      UY: { nombre: 'Uruguay', labelDoc: 'Cédula o RUT', labelIva: 'IVA', monedas: ['UYU', 'USD'], ivaDefault: 22, labelLugar: 'Departamento', lugarDefault: 'Montevideo', regiones: ['Artigas', 'Canelones', 'Cerro Largo', 'Colonia', 'Durazno', 'Flores', 'Florida', 'Lavalleja', 'Maldonado', 'Montevideo', 'Paysandú', 'Río Negro', 'Rivera', 'Rocha', 'Salto', 'San José', 'Soriano', 'Tacuarembó', 'Treinta y Tres'] },
+      VE: { nombre: 'Venezuela', labelDoc: 'Cédula de Identidad', labelIva: 'IVA', monedas: ['VES', 'USD'], ivaDefault: 16, labelLugar: 'Estado', lugarDefault: 'Distrito Capital', regiones: ['Amazonas', 'Anzoátegui', 'Apure', 'Aragua', 'Barinas', 'Bolívar', 'Carabobo', 'Cojedes', 'Delta Amacuro', 'Distrito Capital', 'Falcón', 'Guárico', 'Lara', 'Mérida', 'Miranda', 'Monagas', 'Nueva Esparta', 'Portuguesa', 'Sucre', 'Táchira', 'Trujillo', 'Vargas', 'Yaracuy', 'Zulia'] },
+      US: { nombre: 'Estados Unidos', labelDoc: 'SSN / EIN', labelIva: 'Sales Tax', monedas: ['USD'], ivaDefault: 0, labelLugar: 'Estado', lugarDefault: 'Florida', regiones: ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Carolina del Norte', 'Carolina del Sur', 'Colorado', 'Connecticut', 'Dakota del Norte', 'Dakota del Sur', 'Delaware', 'Florida', 'Georgia', 'Hawái', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Luisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Misisipi', 'Misuri', 'Montana', 'Nebraska', 'Nevada', 'Nueva Jersey', 'Nueva York', 'Nuevo Hampshire', 'Nuevo México', 'Ohio', 'Oklahoma', 'Oregón', 'Pensilvania', 'Rhode Island', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Virginia Occidental', 'Washington', 'Wisconsin', 'Wyoming', 'Distrito de Columbia'] },
     };
+    const ORDEN_PAISES = ['AR', 'BO', 'CL', 'CO', 'CR', 'CU', 'EC', 'SV', 'ES', 'US', 'GT', 'GQ', 'HN', 'MX', 'NI', 'PA', 'PY', 'PE', 'DO', 'UY', 'VE'];
 
-    const radiosPais = document.querySelectorAll('input[name="pais"]');
+    const selectPais = document.getElementById('pais');
+    selectPais.innerHTML = ORDEN_PAISES.map((c) => '<option value="' + c + '">' + CONFIG_PAIS[c].nombre + '</option>').join('');
+    selectPais.value = 'UY';
     const labelDoc = document.getElementById('labelDoc');
+    const labelIva = document.getElementById('labelIva');
+    const labelPorcentajeIva = document.getElementById('labelPorcentajeIva');
     const selectMoneda = document.getElementById('moneda');
     const inputNumero = document.getElementById('numero');
     const checkIva = document.getElementById('incluirIva');
@@ -315,15 +332,19 @@
     function validarDocActual() {
       const pais = paisActual();
       const ok = validarDocumentoPorPais(pais, inputDoc.value);
-      avisoDoc.textContent = ok ? '' : (pais === 'UY'
-        ? 'Cédula o RUT uruguayo inválido (revisá el número y el dígito verificador).'
-        : 'DNI, NIE o CIF español inválido.');
+      let mensaje = '';
+      if (!ok) {
+        if (pais === 'UY') mensaje = 'Cédula o RUT uruguayo inválido (revisá el número y el dígito verificador).';
+        else if (pais === 'ES') mensaje = 'DNI, NIE o CIF español inválido.';
+        else mensaje = CONFIG_PAIS[pais].labelDoc + ' inválido.';
+      }
+      avisoDoc.textContent = mensaje;
       return ok;
     }
     inputDoc.addEventListener('input', validarDocActual);
 
     function paisActual() {
-      return document.querySelector('input[name="pais"]:checked').value;
+      return selectPais.value;
     }
     function tipoPagoActual() {
       return document.querySelector('input[name="tipoPago"]:checked').value;
@@ -369,8 +390,17 @@
       if (!v) return true;
       return validarCedulaUy(v) || validarRutUy(v);
     }
+    // Para el resto de los países solo se exige que el campo no esté vacío (y tenga un
+    // largo razonable): no existe acá un algoritmo real de dígito verificador para cada
+    // documento, y no tiene sentido inventar uno que parezca validar sin validar de verdad.
+    function validarDocumentoGenerico(valor) {
+      const v = valor.trim();
+      return v === '' || v.length >= 5;
+    }
     function validarDocumentoPorPais(pais, valor) {
-      return pais === 'UY' ? validarDocumentoUy(valor) : validarDocumentoEs(valor);
+      if (pais === 'UY') return validarDocumentoUy(valor);
+      if (pais === 'ES') return validarDocumentoEs(valor);
+      return validarDocumentoGenerico(valor);
     }
 
     function claveContador(pais) { return 'pushbrand_comprobante_num_' + pais; }
@@ -396,6 +426,8 @@
       const pais = paisActual();
       const cfg = CONFIG_PAIS[pais];
       labelDoc.textContent = cfg.labelDoc;
+      labelIva.textContent = 'Incluir ' + cfg.labelIva;
+      labelPorcentajeIva.textContent = 'Porcentaje de ' + cfg.labelIva;
       selectMoneda.innerHTML = cfg.monedas.map((m) => '<option value="' + m + '">' + m + '</option>').join('');
       inputNumero.value = sugerirNumero(pais);
       numeroEditadoManualmente = false;
@@ -406,7 +438,7 @@
       validarDocActual();
       calcularYMostrar();
     }
-    radiosPais.forEach((r) => r.addEventListener('change', actualizarPorPais));
+    selectPais.addEventListener('change', actualizarPorPais);
 
     document.getElementById('fecha').addEventListener('change', () => {
       if (paisActual() === 'UY' && !numeroEditadoManualmente) {
@@ -462,7 +494,7 @@
       let html = '';
       html += '<div class="fila-resumen"><span class="k">Subtotal</span><span>' + formatoMonto(c.base, c.moneda) + '</span></div>';
       if (c.ivaIncluido) {
-        html += '<div class="fila-resumen"><span class="k">IVA (' + c.ivaRate + '%)</span><span>' + formatoMonto(c.ivaMonto, c.moneda) + '</span></div>';
+        html += '<div class="fila-resumen"><span class="k">' + CONFIG_PAIS[paisActual()].labelIva + ' (' + c.ivaRate + '%)</span><span>' + formatoMonto(c.ivaMonto, c.moneda) + '</span></div>';
       }
       html += '<div class="fila-resumen"><span class="k">Total del proyecto</span><span>' + formatoMonto(c.totalProyecto, c.moneda) + '</span></div>';
       if (c.esParcial) {
@@ -529,7 +561,7 @@
 
       let resumen = '';
       if (c.ivaIncluido) {
-        resumen += '<div class="linea"><span>IVA (' + c.ivaRate + '%)</span><span>' + formatoMonto(c.ivaMonto, c.moneda) + '</span></div>';
+        resumen += '<div class="linea"><span>' + CONFIG_PAIS[pais].labelIva + ' (' + c.ivaRate + '%)</span><span>' + formatoMonto(c.ivaMonto, c.moneda) + '</span></div>';
       }
       resumen += '<div class="linea destacada"><span>Total del proyecto</span><span>' + formatoMonto(c.totalProyecto, c.moneda) + '</span></div>';
       if (c.esParcial) {
