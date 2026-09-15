@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generar comprobante de pago — PUSH & Brand</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-brand: #f5d800;
+    --color-brand-hover: #ffe94d;
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #121212;
+    --color-bg-tertiary: #1e1e1e;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #d6d2cb;
+    --color-text-muted: #8a8a8a;
+    --color-border-subtle: rgba(255, 255, 255, 0.08);
+    --color-border-default: rgba(255, 255, 255, 0.14);
+    --color-border-strong: rgba(255, 255, 255, 0.22);
+    /* variables aparte para el PDF (fondo blanco): un bug de html2canvas-pro
+       ignora los colores hexadecimales puestos directo en "color" y los
+       reemplaza por el color de texto heredado del body — usar var() lo evita. */
+    --pdf-texto-oscuro: #0b0b0b;
+    --pdf-texto-cuerpo: #444444;
+    --pdf-texto-tenue: #767676;
+    --pdf-texto-pie: #999999;
+    --pdf-borde-claro: #cccccc;
+    --pdf-borde-suave: #e5e5e5;
+    --pdf-borde-tenue: #ececec;
+    --pdf-fondo-tarjeta: #f7f7f7;
+    /* el amarillo de marca (#f5d800) casi no se lee sobre blanco: para el PDF
+       se usa una versión oscurecida solo como acento, nunca como fondo de texto. */
+    --pdf-acento: #8a7000;
+    --font-display: "Anton", Impact, "Arial Narrow", sans-serif;
+    --font-ui: "Inter", "Segoe UI", -apple-system, Roboto, Arial, sans-serif;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-2xl: 16px;
+    --radius-pill: 999px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-bg-primary); color: var(--color-text-primary); font-family: var(--font-ui); }
+  a { color: inherit; }
+  img { max-width: 100%; display: block; }
+
+  .nav { padding: 18px clamp(20px, 4vw, 56px); }
+  .nav-logo { font-family: var(--font-display); font-size: 20px; text-transform: uppercase; letter-spacing: 0.01em; }
+  .nav-logo .accent { color: var(--color-brand); }
+
+  .contenido { max-width: 680px; margin: 0 auto; padding: 20px clamp(20px, 4vw, 56px) 70px; }
+  .eyebrow-oscuro { font-weight: 800; font-size: 12.5px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-brand); }
+  .contenido h1 { font-family: var(--font-display); font-weight: 400; text-transform: uppercase; font-size: clamp(26px, 3.6vw, 36px); line-height: 1.02; margin: 10px 0 14px; }
+  .contenido > p.lead { font-size: 15px; line-height: 1.6; color: var(--color-text-secondary); margin: 0 0 30px; }
+
+  .pais-pills { display: flex; gap: 10px; margin-bottom: 28px; }
+  .pais-pills input { position: absolute; opacity: 0; pointer-events: none; }
+  .pais-pills label {
+    flex: 1; text-align: center; padding: 12px 10px; font-weight: 700; font-size: 14.5px; cursor: pointer;
+    background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-lg);
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .pais-pills input:checked + label { border-color: var(--color-brand); color: var(--color-brand); }
+
+  .campo { margin-bottom: 20px; }
+  .campo label { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 8px; }
+  .campo input, .campo textarea, .campo select {
+    width: 100%; font-family: inherit; font-size: 15px; color: var(--color-text-primary);
+    background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-lg); padding: 12px 14px;
+  }
+  .campo textarea { resize: vertical; min-height: 70px; }
+  .campo input:focus, .campo textarea:focus, .campo select:focus { outline: 2px solid var(--color-brand); outline-offset: 1px; }
+  .campo-hint { font-size: 12.5px; color: var(--color-text-muted); margin: 6px 0 0; line-height: 1.5; }
+
+  .fila { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  .fila3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .fila, .fila3 { grid-template-columns: 1fr; } }
+
+  .campo-check-iva { display: flex; align-items: center; gap: 10px; margin: 4px 0 20px; }
+  .campo-check-iva input { width: 18px; height: 18px; accent-color: var(--color-brand); }
+  .campo-check-iva label { font-size: 14.5px; font-weight: 600; color: var(--color-text-primary); text-transform: none; letter-spacing: normal; }
+
+  .tipo-pago-pills { display: flex; gap: 10px; margin-bottom: 20px; }
+  .tipo-pago-pills input { position: absolute; opacity: 0; pointer-events: none; }
+  .tipo-pago-pills label {
+    flex: 1; text-align: center; padding: 12px 10px; font-weight: 700; font-size: 14.5px; cursor: pointer;
+    background: var(--color-bg-tertiary); border: 1px solid var(--color-border-default); border-radius: var(--radius-lg);
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .tipo-pago-pills input:checked + label { border-color: var(--color-brand); color: var(--color-brand); }
+
+  .aviso-porcentaje { font-size: 12.5px; color: #ff8a65; margin: 6px 0 0; min-height: 16px; }
+  .campo-error { font-size: 12.5px; color: #ff8a65; margin: 6px 0 0; min-height: 16px; }
+
+  .resumen-vivo {
+    background: var(--color-bg-secondary); border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-xl); padding: 16px 18px; margin: 4px 0 20px; font-size: 14px; line-height: 1.9;
+  }
+  .resumen-vivo .fila-resumen { display: flex; justify-content: space-between; gap: 12px; }
+  .resumen-vivo .fila-resumen.total { font-weight: 800; color: var(--color-brand); border-top: 1px solid var(--color-border-strong); margin-top: 6px; padding-top: 8px; }
+  .resumen-vivo .fila-resumen .k { color: var(--color-text-muted); }
+
+  .callout {
+    margin: 8px 0 28px; padding: 16px 18px; background: rgba(245,216,0,0.08);
+    border: 1px solid rgba(245,216,0,0.35); border-radius: var(--radius-xl);
+    font-size: 13.5px; line-height: 1.6; color: var(--color-text-secondary);
+  }
+  .callout strong { color: var(--color-brand); }
+
+  .btn-generar {
+    font-weight: 800; font-size: 15.5px; color: #0b0b0b; background: var(--color-brand);
+    border: none; border-radius: var(--radius-pill); padding: 15px 30px; cursor: pointer; width: 100%;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .btn-generar:hover { background: var(--color-brand-hover); transform: translateY(-1px); }
+  .btn-generar:disabled { opacity: 0.6; cursor: wait; transform: none; }
+
+  .estado { margin-top: 14px; font-size: 13.5px; text-align: center; color: var(--color-text-muted); min-height: 18px; }
+  .estado.ok { color: #6fcf97; }
+  .estado.error { color: #ff8a65; }
+
+  /* ---------- Hoja usada solo para generar el PDF (fondo blanco, paleta propia) ---------- */
+  #envoltorioHojaPdf { position: absolute; top: 0; left: 0; width: 0; height: 0; overflow: hidden; }
+  #hojaPdf { width: 780px; background: #ffffff; color: var(--pdf-texto-oscuro); font-family: var(--font-ui); padding: 40px; word-spacing: 1.8px; }
+  #hojaPdf .marca-pdf { display: flex; align-items: baseline; gap: 6px; font-family: var(--font-display); font-size: 22px; text-transform: uppercase; margin-bottom: 24px; }
+  #hojaPdf .marca-pdf .n1 { color: var(--pdf-texto-oscuro); }
+  #hojaPdf .marca-pdf .n2 { color: var(--pdf-acento); }
+  #hojaPdf h1 { font-family: var(--font-display); font-weight: 400; text-transform: uppercase; font-size: 24px; margin: 8px 0 4px; color: var(--pdf-texto-oscuro); }
+  #hojaPdf .numero-pdf { font-size: 13px; color: var(--pdf-texto-tenue); margin: 0 0 20px; }
+  #hojaPdf p { font-size: 13.5px; line-height: 1.6; color: var(--pdf-texto-cuerpo); }
+  #hojaPdf .partes-pdf { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--pdf-borde-suave); border: 1px solid var(--pdf-borde-suave); border-radius: 16px; overflow: hidden; margin: 10px 0 24px; }
+  #hojaPdf .parte-pdf { background: var(--pdf-fondo-tarjeta); padding: 18px 20px; }
+  #hojaPdf .parte-pdf h2 { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pdf-acento); margin: 0 0 10px; }
+  #hojaPdf .parte-pdf p { margin: 0 0 8px; font-size: 13.5px; color: var(--pdf-texto-oscuro); }
+  #hojaPdf .parte-pdf .t { color: var(--pdf-texto-tenue); font-size: 11.5px; }
+  #hojaPdf table.detalle-pdf { width: 100%; border-collapse: collapse; margin: 4px 0 22px; }
+  #hojaPdf table.detalle-pdf th { text-align: left; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pdf-texto-tenue); padding: 0 0 8px; border-bottom: 1px solid var(--pdf-borde-claro); }
+  #hojaPdf table.detalle-pdf td { font-size: 13.5px; padding: 10px 0; border-bottom: 1px solid var(--pdf-borde-tenue); word-spacing: 2px; color: var(--pdf-texto-oscuro); }
+  #hojaPdf table.detalle-pdf td.monto { text-align: right; white-space: nowrap; }
+  #hojaPdf .resumen-pdf { margin: 0 0 6px; }
+  #hojaPdf .resumen-pdf .linea { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: var(--pdf-texto-cuerpo); word-spacing: 2px; }
+  #hojaPdf .resumen-pdf .linea.destacada { color: var(--pdf-texto-oscuro); font-weight: 700; border-top: 1px solid var(--pdf-borde-claro); margin-top: 4px; padding-top: 8px; }
+  #hojaPdf .total-pdf { display: flex; justify-content: flex-end; gap: 14px; font-size: 16px; font-weight: 800; margin: 4px 0 24px; color: var(--pdf-texto-oscuro); }
+  #hojaPdf .total-pdf .num { color: var(--pdf-acento); }
+  #hojaPdf .pie-pdf { margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--pdf-borde-tenue); font-size: 10.5px; color: var(--pdf-texto-pie); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+  <nav class="nav">
+    <span class="nav-logo">PUSH <span class="accent">&amp;</span> BRAND</span>
+  </nav>
+
+  <div class="contenido">
+    <span class="eyebrow-oscuro">Herramienta interna</span>
+    <h1>Generar comprobante de pago</h1>
+    <p class="lead">Completá los datos y te genera el PDF listo — con el formato ajustado al país del cliente (Uruguay o España). Es de uso interno tuyo, no lo compartas.</p>
+
+    <div class="pais-pills">
+      <input type="radio" name="pais" id="paisUY" value="UY" checked>
+      <label for="paisUY">Cliente en Uruguay</label>
+      <input type="radio" name="pais" id="paisES" value="ES">
+      <label for="paisES">Cliente en España</label>
+    </div>
+
+    <div class="campo">
+      <label for="clienteNombre">Nombre del cliente / empresa</label>
+      <input type="text" id="clienteNombre" placeholder="Ej: Despacho de Abogados A&amp;O">
+    </div>
+
+    <div class="fila">
+      <div class="campo">
+        <label for="clienteDoc" id="labelDoc">Cédula o RUT</label>
+        <input type="text" id="clienteDoc">
+        <p class="campo-error" id="avisoDoc"></p>
+      </div>
+      <div class="campo">
+        <label for="clienteEmail">Email del cliente (opcional)</label>
+        <input type="email" id="clienteEmail" placeholder="para enviarle copia">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="concepto">Concepto / descripción del servicio</label>
+      <textarea id="concepto" placeholder="Ej: Diagnóstico de Marca">Diagnóstico de Marca</textarea>
+    </div>
+
+    <div class="fila3">
+      <div class="campo">
+        <label for="monto">Monto del proyecto (base, sin IVA)</label>
+        <input type="number" id="monto" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="campo">
+        <label for="moneda">Moneda</label>
+        <select id="moneda"></select>
+      </div>
+      <div class="campo">
+        <label for="numero">N° de comprobante</label>
+        <input type="text" id="numero">
+      </div>
+    </div>
+
+    <div class="campo-check-iva">
+      <input type="checkbox" id="incluirIva">
+      <label for="incluirIva">Incluir IVA</label>
+    </div>
+    <div class="fila" id="filaIva" style="display:none">
+      <div class="campo">
+        <label for="ivaPorcentaje">Porcentaje de IVA</label>
+        <input type="number" id="ivaPorcentaje" step="0.5" min="0" max="100" value="21">
+      </div>
+    </div>
+
+    <div class="tipo-pago-pills">
+      <input type="radio" name="tipoPago" id="pagoTotal" value="total" checked>
+      <label for="pagoTotal">Cobro total</label>
+      <input type="radio" name="tipoPago" id="pagoParcial" value="parcial">
+      <label for="pagoParcial">Primer pago (a cuenta)</label>
+    </div>
+    <div class="campo" id="filaPorcentajePago" style="display:none">
+      <label for="porcentajePago">Porcentaje del primer pago (mínimo 50%)</label>
+      <input type="number" id="porcentajePago" min="50" max="100" step="5" value="50">
+      <p class="aviso-porcentaje" id="avisoPorcentaje"></p>
+    </div>
+
+    <div class="resumen-vivo" id="resumenVivo"></div>
+
+    <div class="fila">
+      <div class="campo">
+        <label for="lugar" id="labelLugar">Departamento</label>
+        <select id="lugar"></select>
+      </div>
+      <div class="campo">
+        <label for="fecha">Fecha</label>
+        <input type="date" id="fecha">
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Nota:</strong> este comprobante no es una factura fiscal (todavía no tenés registro tributario formal).
+    </div>
+
+    <button type="button" class="btn-generar" id="btnGenerar">Descargar comprobante en PDF</button>
+    <p class="estado" id="estado"></p>
+  </div>
+
+  <!-- Hoja usada solo para generar el PDF -->
+  <div id="envoltorioHojaPdf"><div id="hojaPdf">
+    <div class="marca-pdf"><span class="n1">PUSH</span><span class="n2">&amp; BRAND</span></div>
+    <h1 id="pdfTitulo">Comprobante de pago</h1>
+    <p class="numero-pdf" id="pdfNumeroFecha"></p>
+    <div class="partes-pdf">
+      <div class="parte-pdf">
+        <h2>Emisor</h2>
+        <p>PUSH &amp; Brand</p>
+        <p class="t">pushandbrand.com</p>
+      </div>
+      <div class="parte-pdf">
+        <h2>Cliente</h2>
+        <p id="pdfClienteNombre"></p>
+        <p class="t" id="pdfClienteDoc"></p>
+        <p class="t" id="pdfClienteEmail"></p>
+      </div>
+    </div>
+    <table class="detalle-pdf">
+      <thead><tr><th>Concepto</th><th style="text-align:right">Importe</th></tr></thead>
+      <tbody><tr><td id="pdfConcepto"></td><td class="monto" id="pdfMonto"></td></tr></tbody>
+    </table>
+    <div class="resumen-pdf" id="resumenPdf"></div>
+    <div class="total-pdf"><span id="pdfTotalLabel">Total</span><span class="num" id="pdfTotal"></span></div>
+    <p id="pdfLugar"></p>
+    <div class="pie-pdf"><span>PUSH &amp; BRAND — PUSHANDBRAND.COM</span><span id="pdfPagina">Página 1/1</span></div>
+  </div></div>
+
+  <iframe name="iframeEnvioOculto" style="display:none"></iframe>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- html2canvas-pro reemplaza el renderer viejo que trae html2pdf.bundle: en navegadores actualizados
+       ese renderer viejo devuelve un canvas en blanco (fondo sólido, sin nada del contenido real). -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
+  <script>
+    const CONFIG_PAIS = {
+      UY: {
+        labelDoc: 'Cédula o RUT', monedas: ['UYU', 'USD'], ivaDefault: 22,
+        labelLugar: 'Departamento', lugarDefault: 'Montevideo',
+        regiones: ['Artigas', 'Canelones', 'Cerro Largo', 'Colonia', 'Durazno', 'Flores', 'Florida', 'Lavalleja', 'Maldonado', 'Montevideo', 'Paysandú', 'Río Negro', 'Rivera', 'Rocha', 'Salto', 'San José', 'Soriano', 'Tacuarembó', 'Treinta y Tres'],
+      },
+      ES: {
+        labelDoc: 'DNI / NIF', monedas: ['EUR', 'USD'], ivaDefault: 21,
+        labelLugar: 'Comunidad autónoma', lugarDefault: 'Comunidad de Madrid',
+        regiones: ['Andalucía', 'Aragón', 'Asturias', 'Baleares', 'Canarias', 'Cantabria', 'Castilla-La Mancha', 'Castilla y León', 'Cataluña', 'Comunidad de Madrid', 'Comunidad Valenciana', 'Extremadura', 'Galicia', 'La Rioja', 'Murcia', 'Navarra', 'País Vasco', 'Ceuta', 'Melilla'],
+      },
+    };
+
+    const radiosPais = document.querySelectorAll('input[name="pais"]');
+    const labelDoc = document.getElementById('labelDoc');
+    const selectMoneda = document.getElementById('moneda');
+    const inputNumero = document.getElementById('numero');
+    const checkIva = document.getElementById('incluirIva');
+    const filaIva = document.getElementById('filaIva');
+    const inputIvaPorcentaje = document.getElementById('ivaPorcentaje');
+    const radiosTipoPago = document.querySelectorAll('input[name="tipoPago"]');
+    const filaPorcentajePago = document.getElementById('filaPorcentajePago');
+    const inputPorcentajePago = document.getElementById('porcentajePago');
+    const avisoPorcentaje = document.getElementById('avisoPorcentaje');
+    const resumenVivo = document.getElementById('resumenVivo');
+    const selectLugar = document.getElementById('lugar');
+    const inputDoc = document.getElementById('clienteDoc');
+    const avisoDoc = document.getElementById('avisoDoc');
+
+    function validarDocActual() {
+      const pais = paisActual();
+      const ok = validarDocumentoPorPais(pais, inputDoc.value);
+      avisoDoc.textContent = ok ? '' : (pais === 'UY'
+        ? 'Cédula o RUT uruguayo inválido (revisá el número y el dígito verificador).'
+        : 'DNI, NIE o CIF español inválido.');
+      return ok;
+    }
+    inputDoc.addEventListener('input', validarDocActual);
+
+    function paisActual() {
+      return document.querySelector('input[name="pais"]:checked').value;
+    }
+    function tipoPagoActual() {
+      return document.querySelector('input[name="tipoPago"]:checked').value;
+    }
+
+    // ---------- Validación de documento de identidad según el país ----------
+    const TABLA_DNI_ES = 'TRWAGMYFPDXBNJZSQVHLCKE';
+    function validarDniEs(valor) {
+      const m = valor.trim().toUpperCase().match(/^(\d{8})([A-Z])$/);
+      if (!m) return false;
+      return TABLA_DNI_ES[parseInt(m[1], 10) % 23] === m[2];
+    }
+    function validarNieEs(valor) {
+      const m = valor.trim().toUpperCase().match(/^([XYZ])(\d{7})([A-Z])$/);
+      if (!m) return false;
+      const prefijo = { X: '0', Y: '1', Z: '2' }[m[1]];
+      return TABLA_DNI_ES[parseInt(prefijo + m[2], 10) % 23] === m[3];
+    }
+    function validarCifEs(valor) {
+      return /^[A-HJNPQRSUVW]\d{7}[A-J0-9]$/i.test(valor.trim());
+    }
+    function validarDocumentoEs(valor) {
+      const v = valor.trim();
+      if (!v) return true;
+      return validarDniEs(v) || validarNieEs(v) || validarCifEs(v);
+    }
+    function validarCedulaUy(valor) {
+      const digitos = valor.replace(/\D/g, '');
+      if (digitos.length < 7 || digitos.length > 8) return false;
+      const num = digitos.padStart(8, '0');
+      const pesos = [2, 9, 8, 7, 6, 3, 4];
+      let suma = 0;
+      for (let i = 0; i < 7; i++) suma += parseInt(num[i], 10) * pesos[i];
+      const resto = suma % 10;
+      const esperado = resto === 0 ? 0 : 10 - resto;
+      return esperado === parseInt(num[7], 10);
+    }
+    function validarRutUy(valor) {
+      return valor.replace(/\D/g, '').length === 12;
+    }
+    function validarDocumentoUy(valor) {
+      const v = valor.trim();
+      if (!v) return true;
+      return validarCedulaUy(v) || validarRutUy(v);
+    }
+    function validarDocumentoPorPais(pais, valor) {
+      return pais === 'UY' ? validarDocumentoUy(valor) : validarDocumentoEs(valor);
+    }
+
+    function claveContador(pais) { return 'pushbrand_comprobante_num_' + pais; }
+
+    function sugerirNumero(pais) {
+      if (pais === 'UY') {
+        const fechaVal = document.getElementById('fecha').value || new Date().toISOString().slice(0, 10);
+        return 'UY-' + fechaVal.replace(/-/g, '');
+      }
+      const guardado = parseInt(localStorage.getItem(claveContador(pais)) || '0', 10);
+      const siguiente = guardado + 1;
+      const anio = new Date().getFullYear();
+      return pais + '-' + anio + '-' + String(siguiente).padStart(3, '0');
+    }
+
+    let ivaEditadoManualmente = false;
+    inputIvaPorcentaje.addEventListener('input', () => { ivaEditadoManualmente = true; calcularYMostrar(); });
+
+    let numeroEditadoManualmente = false;
+    inputNumero.addEventListener('input', () => { numeroEditadoManualmente = true; });
+
+    function actualizarPorPais() {
+      const pais = paisActual();
+      const cfg = CONFIG_PAIS[pais];
+      labelDoc.textContent = cfg.labelDoc;
+      selectMoneda.innerHTML = cfg.monedas.map((m) => '<option value="' + m + '">' + m + '</option>').join('');
+      inputNumero.value = sugerirNumero(pais);
+      numeroEditadoManualmente = false;
+      if (!ivaEditadoManualmente) inputIvaPorcentaje.value = cfg.ivaDefault;
+      document.getElementById('labelLugar').textContent = cfg.labelLugar;
+      selectLugar.innerHTML = cfg.regiones.map((r) => '<option value="' + r + '">' + r + '</option>').join('');
+      selectLugar.value = cfg.lugarDefault;
+      validarDocActual();
+      calcularYMostrar();
+    }
+    radiosPais.forEach((r) => r.addEventListener('change', actualizarPorPais));
+
+    document.getElementById('fecha').addEventListener('change', () => {
+      if (paisActual() === 'UY' && !numeroEditadoManualmente) {
+        inputNumero.value = sugerirNumero('UY');
+      }
+    });
+
+    checkIva.addEventListener('change', () => {
+      filaIva.style.display = checkIva.checked ? 'grid' : 'none';
+      calcularYMostrar();
+    });
+    radiosTipoPago.forEach((r) => r.addEventListener('change', () => {
+      filaPorcentajePago.style.display = tipoPagoActual() === 'parcial' ? 'block' : 'none';
+      calcularYMostrar();
+    }));
+    inputPorcentajePago.addEventListener('input', () => {
+      const v = parseFloat(inputPorcentajePago.value);
+      avisoPorcentaje.textContent = (inputPorcentajePago.value !== '' && v < 50) ? 'El primer pago no puede ser menor al 50%.' : '';
+      calcularYMostrar();
+    });
+    inputPorcentajePago.addEventListener('blur', () => {
+      const v = parseFloat(inputPorcentajePago.value);
+      if (isNaN(v) || v < 50) inputPorcentajePago.value = 50;
+      avisoPorcentaje.textContent = '';
+      calcularYMostrar();
+    });
+    document.getElementById('monto').addEventListener('input', calcularYMostrar);
+    selectMoneda.addEventListener('change', calcularYMostrar);
+
+    document.getElementById('fecha').value = new Date().toISOString().slice(0, 10);
+
+    function formatoMonto(monto, moneda) {
+      const num = parseFloat(monto || '0');
+      return moneda + ' ' + num.toLocaleString('es-UY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function calcular() {
+      const base = parseFloat(document.getElementById('monto').value) || 0;
+      const moneda = selectMoneda.value;
+      const ivaIncluido = checkIva.checked;
+      const ivaRate = ivaIncluido ? (parseFloat(inputIvaPorcentaje.value) || 0) : 0;
+      const ivaMonto = base * ivaRate / 100;
+      const totalProyecto = base + ivaMonto;
+      const esParcial = tipoPagoActual() === 'parcial';
+      const porcentajePago = esParcial ? Math.max(50, parseFloat(inputPorcentajePago.value) || 50) : 100;
+      const importeComprobante = totalProyecto * porcentajePago / 100;
+      const saldoPendiente = totalProyecto - importeComprobante;
+      return { base, moneda, ivaIncluido, ivaRate, ivaMonto, totalProyecto, esParcial, porcentajePago, importeComprobante, saldoPendiente };
+    }
+
+    function calcularYMostrar() {
+      const c = calcular();
+      let html = '';
+      html += '<div class="fila-resumen"><span class="k">Subtotal</span><span>' + formatoMonto(c.base, c.moneda) + '</span></div>';
+      if (c.ivaIncluido) {
+        html += '<div class="fila-resumen"><span class="k">IVA (' + c.ivaRate + '%)</span><span>' + formatoMonto(c.ivaMonto, c.moneda) + '</span></div>';
+      }
+      html += '<div class="fila-resumen"><span class="k">Total del proyecto</span><span>' + formatoMonto(c.totalProyecto, c.moneda) + '</span></div>';
+      if (c.esParcial) {
+        html += '<div class="fila-resumen"><span class="k">Saldo pendiente</span><span>' + formatoMonto(c.saldoPendiente, c.moneda) + '</span></div>';
+      }
+      html += '<div class="fila-resumen total"><span>' + (c.esParcial ? 'A cobrar ahora (' + c.porcentajePago + '%)' : 'A cobrar ahora') + '</span><span>' + formatoMonto(c.importeComprobante, c.moneda) + '</span></div>';
+      resumenVivo.innerHTML = html;
+    }
+
+    actualizarPorPais();
+    calcularYMostrar();
+
+    // html2canvas-pro no respeta los colores que llegan por hoja de estilos dentro de
+    // #hojaPdf (ni literales ni var()): hay que ponerlos como estilo inline justo antes
+    // de capturar. Solo funciona así — inline + var() — probado a mano, no es capricho.
+    function aplicarColoresInlinePdf(hoja) {
+      const set = (el, prop, valor) => { if (el) el.style.setProperty(prop, valor, 'important'); };
+      set(hoja, 'color', 'var(--pdf-texto-oscuro)');
+      set(hoja.querySelector('.marca-pdf .n1'), 'color', 'var(--pdf-texto-oscuro)');
+      set(hoja.querySelector('.marca-pdf .n2'), 'color', 'var(--pdf-acento)');
+      set(hoja.querySelector('h1'), 'color', 'var(--pdf-texto-oscuro)');
+      set(hoja.querySelector('.numero-pdf'), 'color', 'var(--pdf-texto-tenue)');
+      hoja.querySelectorAll(':scope > p').forEach((el) => set(el, 'color', 'var(--pdf-texto-cuerpo)'));
+      const partes = hoja.querySelector('.partes-pdf');
+      set(partes, 'background', 'var(--pdf-borde-suave)');
+      set(partes, 'border-color', 'var(--pdf-borde-suave)');
+      set(partes, 'display', 'grid');
+      set(partes, 'grid-template-columns', '1fr 1fr');
+      set(partes, 'gap', '1px');
+      hoja.querySelectorAll('.parte-pdf').forEach((el) => set(el, 'background', 'var(--pdf-fondo-tarjeta)'));
+      hoja.querySelectorAll('.parte-pdf h2').forEach((el) => set(el, 'color', 'var(--pdf-acento)'));
+      hoja.querySelectorAll('.parte-pdf p').forEach((el) => set(el, 'color', 'var(--pdf-texto-oscuro)'));
+      hoja.querySelectorAll('.parte-pdf .t').forEach((el) => set(el, 'color', 'var(--pdf-texto-tenue)'));
+      // el mismo bug ignora "display:flex"/"width:100%" puestos por hoja de estilos en esta
+      // hoja: sin forzarlos inline, las columnas y las filas etiqueta/valor quedan pegadas.
+      set(hoja.querySelector('table.detalle-pdf'), 'width', '100%');
+      hoja.querySelectorAll('table.detalle-pdf th').forEach((el) => { set(el, 'color', 'var(--pdf-texto-tenue)'); set(el, 'border-bottom-color', 'var(--pdf-borde-claro)'); set(el, 'text-align', 'left'); });
+      hoja.querySelectorAll('table.detalle-pdf td').forEach((el) => { set(el, 'color', 'var(--pdf-texto-oscuro)'); set(el, 'border-bottom-color', 'var(--pdf-borde-tenue)'); });
+      hoja.querySelectorAll('table.detalle-pdf td.monto').forEach((el) => { set(el, 'text-align', 'right'); set(el, 'white-space', 'nowrap'); });
+      hoja.querySelectorAll('.resumen-pdf .linea').forEach((el) => { set(el, 'color', 'var(--pdf-texto-cuerpo)'); set(el, 'display', 'flex'); set(el, 'justify-content', 'space-between'); });
+      hoja.querySelectorAll('.resumen-pdf .linea.destacada').forEach((el) => { set(el, 'color', 'var(--pdf-texto-oscuro)'); set(el, 'border-top-color', 'var(--pdf-borde-claro)'); });
+      hoja.querySelectorAll('.total-pdf').forEach((el) => { set(el, 'color', 'var(--pdf-texto-oscuro)'); set(el, 'display', 'flex'); set(el, 'justify-content', 'flex-end'); set(el, 'gap', '14px'); });
+      hoja.querySelectorAll('.total-pdf .num').forEach((el) => set(el, 'color', 'var(--pdf-acento)'));
+      hoja.querySelectorAll('.pie-pdf').forEach((el) => { set(el, 'color', 'var(--pdf-texto-pie)'); set(el, 'border-top-color', 'var(--pdf-borde-tenue)'); set(el, 'display', 'flex'); set(el, 'justify-content', 'space-between'); });
+    }
+
+    function poblarHojaPdf() {
+      const pais = paisActual();
+      const numero = inputNumero.value.trim();
+      const fecha = document.getElementById('fecha').value;
+      const lugar = document.getElementById('lugar').value.trim();
+      const nombreCliente = document.getElementById('clienteNombre').value.trim();
+      const doc = document.getElementById('clienteDoc').value.trim();
+      const email = document.getElementById('clienteEmail').value.trim();
+      const concepto = document.getElementById('concepto').value.trim();
+      const c = calcular();
+
+      document.getElementById('pdfNumeroFecha').textContent = 'N° ' + numero + '  ·  ' + fecha;
+      document.getElementById('pdfClienteNombre').textContent = nombreCliente || '—';
+      document.getElementById('pdfClienteDoc').textContent = (CONFIG_PAIS[pais].labelDoc + ': ' + (doc || '—'));
+      document.getElementById('pdfClienteEmail').textContent = email || '';
+      document.getElementById('pdfConcepto').textContent = concepto;
+      document.getElementById('pdfMonto').textContent = formatoMonto(c.base, c.moneda);
+
+      let resumen = '';
+      if (c.ivaIncluido) {
+        resumen += '<div class="linea"><span>IVA (' + c.ivaRate + '%)</span><span>' + formatoMonto(c.ivaMonto, c.moneda) + '</span></div>';
+      }
+      resumen += '<div class="linea destacada"><span>Total del proyecto</span><span>' + formatoMonto(c.totalProyecto, c.moneda) + '</span></div>';
+      if (c.esParcial) {
+        resumen += '<div class="linea"><span>Tipo de pago</span><span>Primer pago (' + c.porcentajePago + '%)</span></div>';
+        resumen += '<div class="linea"><span>Saldo pendiente</span><span>' + formatoMonto(c.saldoPendiente, c.moneda) + '</span></div>';
+      } else {
+        resumen += '<div class="linea"><span>Tipo de pago</span><span>Pago total</span></div>';
+      }
+      document.getElementById('resumenPdf').innerHTML = resumen;
+
+      document.getElementById('pdfTotalLabel').textContent = c.esParcial ? 'Importe de este comprobante' : 'Total a pagar';
+      document.getElementById('pdfTotal').textContent = formatoMonto(c.importeComprobante, c.moneda);
+      document.getElementById('pdfLugar').textContent = 'Lugar y fecha: ' + (lugar || '—') + ', ' + fecha;
+    }
+
+    function slug(texto) {
+      return (texto || 'cliente').toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'cliente';
+    }
+
+    const btnGenerar = document.getElementById('btnGenerar');
+    const estado = document.getElementById('estado');
+
+    function enviarPorCorreo(archivo, nombreArchivo, datos) {
+      // Se usa un <form> real (no fetch/ajax) porque el endpoint /ajax/ de FormSubmit
+      // no adjunta archivos — los descarta en silencio. Se apunta a un iframe oculto
+      // para que el POST + redirect de FormSubmit no saque al usuario de esta página.
+      // OJO: la primera vez que se use, FormSubmit manda un correo de confirmación a
+      // pushandbrand@gmail.com que hay que abrir y confirmar para activar el envío.
+      return new Promise((resolve) => {
+        const form = document.createElement('form');
+        form.action = 'https://formsubmit.co/pushandbrand@gmail.com';
+        form.method = 'POST';
+        form.enctype = 'multipart/form-data';
+        form.target = 'iframeEnvioOculto';
+        form.style.display = 'none';
+
+        function campo(nombre, valor) {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = nombre;
+          input.value = valor;
+          form.appendChild(input);
+        }
+        campo('_subject', 'Comprobante de pago generado — ' + datos.nombreCliente);
+        campo('_template', 'table');
+        campo('_captcha', 'false');
+        campo('_cc', datos.email);
+        campo('Cliente', datos.nombreCliente);
+        campo('Documento', datos.doc || '—');
+        campo('Concepto', datos.concepto);
+        campo('N° de comprobante', datos.numero);
+        campo('Importe de este comprobante', datos.importe);
+
+        const inputArchivo = document.createElement('input');
+        inputArchivo.type = 'file';
+        inputArchivo.name = nombreArchivo;
+        form.appendChild(inputArchivo);
+        const dt = new DataTransfer();
+        dt.items.add(archivo);
+        inputArchivo.files = dt.files;
+
+        document.body.appendChild(form);
+        form.submit();
+        setTimeout(() => { form.remove(); resolve(); }, 2000);
+      });
+    }
+
+    btnGenerar.addEventListener('click', async () => {
+      const nombreCliente = document.getElementById('clienteNombre').value.trim();
+      const monto = document.getElementById('monto').value;
+      const email = document.getElementById('clienteEmail').value.trim();
+      if (!nombreCliente || !monto) {
+        estado.textContent = 'Completá al menos el nombre del cliente y el monto.';
+        estado.className = 'estado error';
+        return;
+      }
+      if (!validarDocActual()) {
+        estado.textContent = 'Revisá el documento del cliente antes de generar el comprobante.';
+        estado.className = 'estado error';
+        return;
+      }
+
+      btnGenerar.disabled = true;
+      btnGenerar.textContent = 'Generando...';
+      estado.textContent = '';
+      estado.className = 'estado';
+
+      poblarHojaPdf();
+      aplicarColoresInlinePdf(document.getElementById('hojaPdf'));
+      await document.fonts.ready;
+      const hoja = document.getElementById('hojaPdf');
+      const canvas = await html2canvas(hoja, {
+        scale: 0.75,
+        backgroundColor: '#ffffff',
+        letterRendering: true,
+        width: hoja.scrollWidth,
+        height: hoja.scrollHeight,
+        windowWidth: hoja.scrollWidth,
+        windowHeight: hoja.scrollHeight,
+      });
+      const margenMm = 8;
+      const anchoPaginaMm = 210; // ancho A4, para que se vea como una hoja normal
+      const anchoImagenMm = anchoPaginaMm - margenMm * 2;
+      const altoImagenMm = anchoImagenMm * (canvas.height / canvas.width);
+      // el comprobante es corto: en vez de A4 completo (que deja un enorme
+      // espacio en blanco abajo), la página se ajusta al contenido real —
+      // algunos visores/previews recortan la vista a una altura fija y
+      // "cortaban" el pie de página en medio de esa zona en blanco.
+      const altoPaginaMm = altoImagenMm + margenMm * 2;
+      // jsPDF "endereza" el formato [ancho, alto] para que coincida con orientation
+      // (invirtiéndolo si hace falta) — si el recibo es más bajo que ancho hay que
+      // pedir landscape, si no jsPDF lo invierte solo y deforma la página.
+      const orientacion = altoPaginaMm >= anchoPaginaMm ? 'portrait' : 'landscape';
+      const opciones = {
+        margin: margenMm,
+        image: { type: 'png' },
+        jsPDF: { unit: 'mm', format: [anchoPaginaMm, altoPaginaMm], orientation: orientacion },
+      };
+      const pdf = await html2pdf().set(opciones).from(canvas, 'canvas').toPdf().get('pdf');
+      const blob = pdf.output('blob');
+      const c = calcular();
+      const nombreArchivo = 'comprobante-' + slug(nombreCliente) + '-' + inputNumero.value.trim() + (c.esParcial ? '-1erpago' : '') + '.pdf';
+
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = nombreArchivo;
+      enlace.click();
+      URL.revokeObjectURL(url);
+
+      if (email) {
+        btnGenerar.textContent = 'Enviando por correo...';
+        const archivo = new File([blob], nombreArchivo, { type: 'application/pdf' });
+        await enviarPorCorreo(archivo, nombreArchivo, {
+          nombreCliente,
+          doc: document.getElementById('clienteDoc').value.trim(),
+          concepto: document.getElementById('concepto').value.trim(),
+          numero: inputNumero.value.trim(),
+          importe: formatoMonto(c.importeComprobante, c.moneda),
+          email,
+        });
+      }
+
+      const pais = paisActual();
+      if (pais !== 'UY') {
+        const guardado = parseInt(localStorage.getItem(claveContador(pais)) || '0', 10);
+        localStorage.setItem(claveContador(pais), String(guardado + 1));
+      }
+
+      btnGenerar.disabled = false;
+      btnGenerar.textContent = 'Descargar comprobante en PDF';
+      if (!email) {
+        estado.textContent = 'Comprobante descargado. No se envió por correo (no completaste el email del cliente).';
+      } else {
+        estado.textContent = 'Comprobante descargado y enviado a tu correo con copia a ' + email + '.';
+      }
+      estado.className = 'estado ok';
+    });
+  </script>
+</body>
+</html>
